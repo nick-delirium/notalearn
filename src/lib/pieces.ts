@@ -8,9 +8,19 @@ export type Square = `${File}${Rank}`
 
 export type Placements = Partial<Record<Square, PieceKey>>
 
+/**
+ * Glyphs from the public-domain Chess Cuernavaca diagram font
+ * (github.com/samboy/ChessGraphics — ChessCuernavaca.ttf, served from /fonts).
+ * White pieces are outline glyphs, black pieces are solid.
+ */
+/**
+ * Solid glyphs (the font's black-piece shapes) are used for BOTH colors and
+ * tinted via CSS — the font's own white-piece glyphs are line-art and can't
+ * be filled. White pieces get a cream fill + dark stroke in app.css.
+ */
 export const GLYPHS: Record<PieceKey, string> = {
-  wK: '♚', wQ: '♛', wR: '♜', wB: '♝', wN: '♞', wP: '♟',
-  bK: '♚', bQ: '♛', bR: '♜', bB: '♝', bN: '♞', bP: '♟'
+  wK: 'l', wQ: 'w', wR: 't', wB: 'v', wN: 'm', wP: 'o',
+  bK: 'l', bQ: 'w', bR: 't', bB: 'v', bN: 'm', bP: 'o'
 }
 
 export const NAMES: Record<PieceKey, string> = {

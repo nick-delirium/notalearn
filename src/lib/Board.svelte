@@ -50,6 +50,7 @@
             class:selected={selected === sq}
             class:hinted={hinted === sq}
             class:invalid={invalid === sq}
+            class:correct={mode === 'easy' && !!placements[sq] && placements[sq] === target[sq]}
             class:movable={mode === 'easy' && placements[sq]}
             onclick={() => onsquareclick(sq)}
             ondragover={(e) => e.preventDefault()}

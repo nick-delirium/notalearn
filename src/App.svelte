@@ -187,9 +187,9 @@
   <div class="stage">
     {#key `${difficulty}-${puzzleId}`}
       {#if difficulty === 'easy'}
-        <EasyMode bind:this={modeRef} {target} bind:score bind:wrongSquares bind:canUndo />
+        <EasyMode bind:this={modeRef} {target} bind:score bind:wrongSquares bind:canUndo hinted={hintedSquare} />
       {:else}
-        <RecallMode {difficulty} {target} bind:score bind:wrongSquares bind:strays />
+        <RecallMode {difficulty} {target} bind:score bind:wrongSquares bind:strays hinted={hintedSquare} />
       {/if}
     {/key}
 
@@ -228,6 +228,11 @@
       {:else}
         <div class="hint"><span>⌁</span><p>{diff.hint}</p></div>
       {/if}
+
+      <div class="learn">
+        <span>♞</span>
+        <p>New to notation? Read about <a href="https://en.wikipedia.org/wiki/Algebraic_notation_(chess)" target="_blank" rel="noopener noreferrer">Algebraic Chess Notation</a> on Wikipedia.</p>
+      </div>
     </aside>
   </div>
 

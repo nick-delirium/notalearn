@@ -10,10 +10,14 @@ export const positionPicker: Action<HTMLElement, string | null> = (node, param) 
     const side = node.closest('.board-side')
     const frame = side?.querySelector('.board-frame')
     const board = frame?.querySelector(':scope > .board')
-    if (!frame || !board || !param) return
+    if (!side || !frame || !board || !param) return
+    const sRect = side.getBoundingClientRect()
     const fRect = frame.getBoundingClientRect()
-    const bRect = board.getBoundingClientRect()
-    const cell = bRect.width / 8
+    // measure a real square — the board element's rect includes its border
+    const probe = board.querySelector('.square')
+    if (!probe) return
+    const cell = probe.getBoundingClientRect().width
+    const origin = probe.getBoundingClientRect().left
     const f = param.charCodeAt(0) - 97
     const r = 8 - Number(param[1])
 
@@ -23,14 +27,16 @@ export const positionPicker: Action<HTMLElement, string | null> = (node, param) 
     const w = node.offsetWidth
     const h = node.offsetHeight
 
-    const cx = bRect.left - fRect.left + f * cell + cell / 2
-    const sqTop = bRect.top - fRect.top + r * cell
+    const absCx = origin + f * cell + cell / 2
+    const sqTop = probe.getBoundingClientRect().top - fRect.top + r * cell
 
-    const x = Math.min(Math.max(cx - w / 2, 10), window.innerWidth - w - 10)
+    // clamp horizontally to the viewport, then to the board container
+    let absX = Math.min(Math.max(absCx - w / 2, 10), window.innerWidth - w - 10)
+    absX = Math.min(Math.max(absX, sRect.left + 2), sRect.right - w - 2)
     let y = sqTop - h - 10
     if (y < 10) y = Math.min(sqTop + cell + 10, fRect.height - h - 6)
 
-    node.style.left = `${Math.max(6, x)}px`
+    node.style.left = `${absX - sRect.left}px`
     node.style.top = `${y}px`
     node.style.visibility = 'visible'
   }

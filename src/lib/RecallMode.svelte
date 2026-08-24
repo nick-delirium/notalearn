@@ -10,6 +10,7 @@
     score?: number
     wrongSquares?: Square[]
     strays?: number
+    hinted?: Square | null
   }
 
   let {
@@ -17,7 +18,8 @@
     difficulty,
     score = $bindable(0),
     wrongSquares = $bindable([]),
-    strays = $bindable(0)
+    strays = $bindable(0),
+    hinted = null
   }: Props = $props()
 
   let guesses = $state<Placements>({})
@@ -72,6 +74,7 @@
   {target}
   mode={difficulty}
   {selected}
+  {hinted}
   onsquareclick={clickSquare}
   ondragstart={() => {}}
   ondrop={() => {}}
