@@ -141,6 +141,16 @@
     window.dispatchEvent(new Event('sw-reload'))
   }
 
+  // the GitHub buttons widget scans the DOM on load, so inject it after mount
+  $effect(() => {
+    if (document.querySelector('script[src*="buttons.github.io"]')) return
+    const s = document.createElement('script')
+    s.src = 'https://buttons.github.io/buttons.js'
+    s.async = true
+    s.defer = true
+    document.body.appendChild(s)
+  })
+
   newGame()
 </script>
 
@@ -232,6 +242,10 @@
       <div class="learn">
         <span>♞</span>
         <p>New to notation? Read about <a href="https://en.wikipedia.org/wiki/Algebraic_notation_(chess)" target="_blank" rel="noopener noreferrer">Algebraic Chess Notation</a> on Wikipedia.</p>
+      </div>
+
+      <div class="star-row">
+        <a class="github-button" href="https://github.com/nick-delirium/notalearn" data-color-scheme="no-preference: light; light: light; dark: dark;" data-size="large" data-show-count="true" aria-label="Star nick-delirium/notalearn on GitHub">Star</a>
       </div>
     </aside>
   </div>

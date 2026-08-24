@@ -101,6 +101,8 @@ button { font: inherit; cursor: pointer; }
 .hint p, .success p, .learn p { margin: 0; font-size: 13px; line-height: 1.55; color: #b9c4ae; }
 .learn a { color: #e07658; text-decoration-color: #e0765866; text-underline-offset: 2px; transition: text-decoration-color .15s; }
 .learn a:hover { text-decoration-color: #e07658; }
+
+.star-row { display: flex; justify-content: center; padding-top: 2px; }
 .success { background: #18241a; }
 .success p { color: #cfe0bd; font-weight: 600; }
 .success div { display: grid; gap: 10px; justify-items: start; }
