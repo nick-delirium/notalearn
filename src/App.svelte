@@ -61,7 +61,14 @@
   const diff = $derived(DIFFICULTIES.find((d) => d.id === difficulty)!)
   const phaseLabel = $derived(PHASES.find((p) => p.id === phase)!.label)
   const total = $derived(Object.keys(target).length)
-  const solved = $derived(total > 0 && score === total)
+  const solved = $derived(total > 0 && score === total && strays === 0)
+
+  // strays only exist in medium/hard (RecallMode syncs them); keep the
+  // counter at zero in easy mode so a previous recall session can't leak
+  // a stale "off-target" count into the score line
+  $effect(() => {
+    if (difficulty === 'easy') strays = 0
+  })
 
   function plyRange(max: number): [number, number] {
     switch (phase) {
