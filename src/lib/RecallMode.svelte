@@ -1,6 +1,7 @@
 <script lang="ts">
   import Board from './Board.svelte'
-  import { GLYPHS, PALETTE } from './pieces'
+  import SolvedBar from './SolvedBar.svelte'
+  import { GLYPHS, NAMES, PALETTE } from './pieces'
   import { positionPicker } from './positionPicker'
   import type { PieceKey, Placements, Square } from './pieces'
 
@@ -11,6 +12,8 @@
     wrongSquares?: Square[]
     strays?: number
     hinted?: Square | null
+    solved?: boolean
+    onnext: () => void
   }
 
   let {
@@ -19,7 +22,9 @@
     score = $bindable(0),
     wrongSquares = $bindable([]),
     strays = $bindable(0),
-    hinted = null
+    hinted = null,
+    solved = false,
+    onnext
   }: Props = $props()
 
   let guesses = $state<Placements>({})
@@ -70,6 +75,7 @@
   mode={difficulty}
   {selected}
   {hinted}
+  {solved}
   onsquareclick={clickSquare}
   ondragstart={() => {}}
   ondrop={() => {}}
@@ -86,11 +92,15 @@
             <button
               class:picked={guesses[selected] === p}
               onclick={() => pickPiece(p)}
-              aria-label={p}
+              aria-label={NAMES[p]}
+              data-piece={p}
             ><span class="piece {p[0] === 'w' ? 'white' : 'black'}">{GLYPHS[p]}</span></button>
           {/each}
         </div>
       </div>
     {/key}
+  {/if}
+  {#if solved}
+    <SolvedBar {onnext} />
   {/if}
 </Board>

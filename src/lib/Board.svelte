@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import { GLYPHS, NAMES, FILES, RANKS } from './pieces'
+  import { GLYPHS, NAMES, FILES, RANKS, START } from './pieces'
   import type { Placements, Square } from './pieces'
 
   interface Props {
@@ -11,6 +11,7 @@
     hinted?: Square | null
     legalTargets?: Square[]
     invalid?: Square | null
+    solved?: boolean
     onsquareclick: (sq: Square) => void
     ondragstart: (sq: Square, e: DragEvent) => void
     ondrop: (sq: Square, e: DragEvent) => void
@@ -25,6 +26,7 @@
     hinted = null,
     legalTargets = [],
     invalid = null,
+    solved = false,
     onsquareclick,
     ondragstart,
     ondrop,
@@ -37,7 +39,7 @@
   }
 </script>
 
-<div class="board-side">
+<div class="board-side" class:solved>
   <div class="board-frame">
     <div class="coords files">{#each FILES as f}<span>{f}</span>{/each}</div>
     <div class="coords ranks">{#each RANKS as r}<span>{r}</span>{/each}</div>
@@ -50,7 +52,6 @@
             class:selected={selected === sq}
             class:hinted={hinted === sq}
             class:invalid={invalid === sq}
-            class:correct={mode === 'easy' && !!placements[sq] && placements[sq] === target[sq]}
             class:movable={mode === 'easy' && placements[sq]}
             onclick={() => onsquareclick(sq)}
             ondragover={(e) => e.preventDefault()}
@@ -71,8 +72,13 @@
                 draggable={mode === 'easy'}
                 ondragstart={(e) => ondragstart(sq, e)}
               >{GLYPHS[placements[sq]]}</span>
+              <!-- a corner badge rather than a square tint, which fought the checkerboard.
+                   Recall flags every guess; easy only confirms pieces the player has
+                   brought into place — badging untouched start pieces too was just noise -->
               {#if mode !== 'easy'}
                 <span class="mark {status(sq)}">{status(sq) === 'correct' ? '✓' : '✕'}</span>
+              {:else if status(sq) === 'correct' && START[sq] !== placements[sq]}
+                <span class="mark correct">✓</span>
               {/if}
             {:else if mode === 'medium' && target[sq]}
               <span class="unknown">?</span>

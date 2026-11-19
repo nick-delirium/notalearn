@@ -44,7 +44,6 @@
   let phase = $state<Phase>('random')
   let target = $state<Placements>({})
   let movePairs = $state<MovePair[]>([])
-  let moveCount = $state(0)
   let result = $state('')
   let puzzleId = $state(0)
   let score = $state(0)
@@ -62,6 +61,13 @@
   const phaseLabel = $derived(PHASES.find((p) => p.id === phase)!.label)
   const total = $derived(Object.keys(target).length)
   const solved = $derived(total > 0 && score === total && strays === 0)
+  // name the position by its last move in proper notation ("8...c6", "11. Qxd5+");
+  // a ply count would call 8 full moves "16 moves"
+  const lastMove = $derived.by(() => {
+    const last = movePairs.at(-1)
+    if (!last) return null
+    return last.b ? `${last.n}...${last.b}` : `${last.n}. ${last.w}`
+  })
 
   // strays only exist in medium/hard (RecallMode syncs them); keep the
   // counter at zero in easy mode so a previous recall session can't leak
@@ -115,7 +121,6 @@
     for (let i = 0; i < k; i++) game.move(history[i])
 
     target = toMap(game)
-    moveCount = k
     gameEnd = k === max
     result = gameEnd ? source.result : ''
 
@@ -219,14 +224,16 @@
   <div class="stage">
     {#key `${difficulty}-${puzzleId}`}
       {#if difficulty === 'easy'}
-        <EasyMode bind:this={modeRef} {target} bind:score bind:wrongSquares bind:canUndo hinted={hintedSquare} />
+        <EasyMode bind:this={modeRef} {target} bind:score bind:wrongSquares bind:canUndo hinted={hintedSquare} {solved} onnext={newGame} />
       {:else}
-        <RecallMode {difficulty} {target} bind:score bind:wrongSquares bind:strays hinted={hintedSquare} />
+        <RecallMode {difficulty} {target} bind:score bind:wrongSquares bind:strays hinted={hintedSquare} {solved} onnext={newGame} />
       {/if}
     {/key}
 
     <aside class="panel">
-      <p class="eyebrow">Position after {moveCount} moves</p>
+      <p class="eyebrow">
+        {#if lastMove}Position after <span class="eyebrow-san">{lastMove}</span>{:else}Starting position{/if}
+      </p>
       <div class="score-row">
         <div class="score" class:won={solved}>
           <b>{score}</b><span>/ {total} pieces correct{strays ? ` · ${strays} off-target` : ''}</span>
@@ -250,12 +257,10 @@
       </div>
 
       {#if solved}
+        <!-- the "Next puzzle" action lives under the board (SolvedBar), where it's seen on mobile too -->
         <div class="success">
           <span>✦</span>
-          <div>
-            <p>Perfect — every piece is where it belongs.</p>
-            <button class="action next" onclick={newGame}>Next puzzle →</button>
-          </div>
+          <p>Perfect — every piece is where it belongs.</p>
         </div>
       {:else}
         <div class="hint"><span>⌁</span><p>{diff.hint}</p></div>

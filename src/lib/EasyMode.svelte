@@ -1,6 +1,7 @@
 <script lang="ts">
   import Board from './Board.svelte'
-  import { GLYPHS } from './pieces'
+  import SolvedBar from './SolvedBar.svelte'
+  import { GLYPHS, NAMES } from './pieces'
   import { SQUARES, applyMove, canMove, revokeCastling, startPosition } from './moves'
   import type { Position, PromoType } from './moves'
   import type { PieceKey, Placements, Square } from './pieces'
@@ -11,6 +12,8 @@
     wrongSquares?: Square[]
     canUndo?: boolean
     hinted?: Square | null
+    solved?: boolean
+    onnext: () => void
   }
 
   let {
@@ -18,7 +21,9 @@
     score = $bindable(0),
     wrongSquares = $bindable([]),
     canUndo = $bindable(false),
-    hinted = null
+    hinted = null,
+    solved = false,
+    onnext
   }: Props = $props()
 
   // positions are immutable values — every change assigns a new one — so raw state suffices
@@ -171,18 +176,23 @@
   {legalTargets}
   invalid={invalidSq}
   {hinted}
+  {solved}
   onsquareclick={clickSquare}
   ondragstart={dragStart}
   ondrop={dropOn}
 >
+  {#if solved}
+    <SolvedBar {onnext} />
+  {:else}
   <div class="under-board">
     <span class="ub-turn {turn}">{turn === 'w' ? 'White' : 'Black'} to move</span>
     {#if pendingPromo}
       <span class="ub-info">Promote to:</span>
       <div class="promo">
         {#each PROMO_TYPES as t}
-          <button onclick={() => choosePromo(t)} aria-label={'Promote to ' + t}>
-            <span class="piece {turn}">{GLYPHS[(turn + t) as PieceKey]}</span>
+          {@const key = (turn + t) as PieceKey}
+          <button onclick={() => choosePromo(t)} aria-label={`Promote to ${NAMES[key].split(' ')[1]}`}>
+            <span class="piece {turn === 'w' ? 'white' : 'black'}">{GLYPHS[key]}</span>
           </button>
         {/each}
         <button class="promo-cancel" onclick={cancelPromo} aria-label="Cancel promotion">✕</button>
@@ -194,4 +204,5 @@
       <span class="ub-info dim">Click a piece to see its legal moves · drag or click-click to move</span>
     {/if}
   </div>
+  {/if}
 </Board>

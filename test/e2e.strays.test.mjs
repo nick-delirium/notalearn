@@ -62,7 +62,7 @@ async function clickSquare(sq) {
 }
 
 async function pickPiece(pieceKey) {
-  await page.locator(`.picker button[aria-label="${pieceKey}"]`).click()
+  await page.locator(`.picker button[data-piece="${pieceKey}"]`).click()
   await sleep(60)
 }
 
