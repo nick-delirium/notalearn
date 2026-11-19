@@ -12,7 +12,7 @@
     legalTargets?: Square[]
     invalid?: Square | null
     onsquareclick: (sq: Square) => void
-    ondragstart: (sq: Square) => void
+    ondragstart: (sq: Square, e: DragEvent) => void
     ondrop: (sq: Square, e: DragEvent) => void
     children?: Snippet
   }
@@ -69,7 +69,7 @@
                 aria-label="chess piece"
                 class="piece {placements[sq][0] === 'w' ? 'white' : 'black'}"
                 draggable={mode === 'easy'}
-                ondragstart={() => ondragstart(sq)}
+                ondragstart={(e) => ondragstart(sq, e)}
               >{GLYPHS[placements[sq]]}</span>
               {#if mode !== 'easy'}
                 <span class="mark {status(sq)}">{status(sq) === 'correct' ? '✓' : '✕'}</span>

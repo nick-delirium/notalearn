@@ -103,6 +103,7 @@
   }
 
   function newGame(): void {
+    clearHint()
     // mix of curated human games and generated ones
     const source = Math.random() < GENERATED_CHANCE ? generateGame() : loadRealGame()
     const history = source.history
@@ -134,6 +135,18 @@
     hintTimer = setTimeout(() => (hintedSquare = null), 2200)
   }
 
+  // a hint belongs to one board — never carry it into a new puzzle or mode
+  function clearHint(): void {
+    clearTimeout(hintTimer)
+    hintedSquare = null
+  }
+
+  function setDifficulty(id: Difficulty): void {
+    difficulty = id
+    clearHint()
+    openMenu = null
+  }
+
   function toggleMenu(id: 'difficulty' | 'phase'): void {
     openMenu = openMenu === id ? null : id
   }
@@ -145,7 +158,9 @@
   }
 
   function reloadApp(): void {
-    window.dispatchEvent(new Event('sw-reload'))
+    // pages are fetched network-first, so a plain reload picks up the new build
+    swUpdate.reloading = true
+    location.reload()
   }
 
   // the GitHub buttons widget scans the DOM on load, so inject it after mount
@@ -175,7 +190,7 @@
           <div class="menu-list" role="listbox" aria-label="Difficulty">
             {#each DIFFICULTIES as d}
               <button role="option" aria-selected={difficulty === d.id} class:active={difficulty === d.id}
-                onclick={() => { difficulty = d.id; openMenu = null }}>{d.label}</button>
+                onclick={() => setDifficulty(d.id)}>{d.label}</button>
             {/each}
           </div>
         {/if}

@@ -10,13 +10,10 @@ export type Placements = Partial<Record<Square, PieceKey>>
 
 /**
  * Glyphs from the public-domain Chess Cuernavaca diagram font
- * (github.com/samboy/ChessGraphics — ChessCuernavaca.ttf, served from /fonts).
- * White pieces are outline glyphs, black pieces are solid.
- */
-/**
- * Solid glyphs (the font's black-piece shapes) are used for BOTH colors and
- * tinted via CSS — the font's own white-piece glyphs are line-art and can't
- * be filled. White pieces get a cream fill + dark stroke in app.css.
+ * (github.com/samboy/ChessGraphics — bundled from src/fonts/ChessCuernavaca.ttf).
+ * The font's solid (black-piece) shapes are used for BOTH colors and tinted via
+ * CSS — its own white-piece glyphs are line-art and can't be filled. White
+ * pieces get a cream fill + dark stroke in app.css.
  */
 export const GLYPHS: Record<PieceKey, string> = {
   wK: 'l', wQ: 'w', wR: 't', wB: 'v', wN: 'm', wP: 'o',

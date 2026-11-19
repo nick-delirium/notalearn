@@ -35,11 +35,6 @@
   $effect(() => { wrongSquares = mistakes })
   $effect(() => { strays = straysCount })
 
-  function status(sq: Square): '' | 'correct' | 'wrong' {
-    if (!guesses[sq]) return ''
-    return guesses[sq] === target[sq] ? 'correct' : 'wrong'
-  }
-
   function clickSquare(sq: Square): void {
     if (difficulty === 'medium' && !target[sq]) return
     selected = selected === sq ? null : sq

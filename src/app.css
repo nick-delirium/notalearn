@@ -10,6 +10,8 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: radial-gradient(circle at 82% 8%, #1c2a1d 0 6%, transparent 32%), #10150e; }
 button { font: inherit; cursor: pointer; }
+/* pinch-zoom stays available; this only stops rapid board taps from double-tap zooming */
+button, .board { touch-action: manipulation; }
 :focus-visible { outline: 2px solid #e07658; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }

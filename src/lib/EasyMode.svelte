@@ -1,7 +1,8 @@
 <script lang="ts">
   import Board from './Board.svelte'
-  import { START, GLYPHS } from './pieces'
-  import { SQUARES, canMove } from './moves'
+  import { GLYPHS } from './pieces'
+  import { SQUARES, applyMove, canMove, revokeCastling, startPosition } from './moves'
+  import type { Position, PromoType } from './moves'
   import type { PieceKey, Placements, Square } from './pieces'
 
   interface Props {
@@ -20,22 +21,18 @@
     hinted = null
   }: Props = $props()
 
-  interface Snapshot {
-    p: Placements
-    t: number
-  }
-
-  let placements = $state<Placements>({ ...START })
-  let ply = $state(0)
+  // positions are immutable values — every change assigns a new one — so raw state suffices
+  let position = $state.raw<Position>(startPosition())
+  let undoStack = $state.raw<Position[]>([])
   let selected = $state<Square | null>(null)
   let invalidSq = $state<Square | null>(null)
   let pendingPromo = $state<{ from: Square; to: Square } | null>(null)
   let dragged: Square | null = null
-  let undoStack = $state<Snapshot[]>([])
   let invalidTimer: ReturnType<typeof setTimeout> | undefined
   let lastDrop = 0
 
-  const turn = $derived(ply % 2 === 0 ? ('w' as const) : ('b' as const))
+  const placements = $derived(position.placements)
+  const turn = $derived(position.turn)
   const correct = $derived(
     (Object.keys(target) as Square[]).reduce((n, sq) => n + (placements[sq] === target[sq] ? 1 : 0), 0)
   )
@@ -45,7 +42,7 @@
   const legalTargets = $derived.by(() => {
     const sel = selected
     if (!sel || placements[sel]?.[0] !== turn) return []
-    return SQUARES.filter((sq) => canMove(placements, sel, sq))
+    return SQUARES.filter((sq) => canMove(position, sel, sq))
   })
 
   $effect(() => { score = correct })
@@ -54,8 +51,7 @@
   $effect(() => () => clearTimeout(invalidTimer))
 
   function snapshot(): void {
-    undoStack.push({ p: placements, t: ply })
-    if (undoStack.length > 300) undoStack.shift()
+    undoStack = [...undoStack.slice(-299), position]
   }
 
   function flashInvalid(sq: Square): void {
@@ -76,54 +72,25 @@
     return to
   }
 
-  function attemptMove(from: Square, to: Square, promoType: 'Q' | 'R' | 'B' | 'N' | null = null): void {
+  function attemptMove(from: Square, to: Square, promoType: PromoType | null = null): void {
     const piece = placements[from]
     if (!piece) return
     to = normalizeCastleTarget(from, to)
-    if (piece[0] !== turn || !canMove(placements, from, to)) {
+    if (!canMove(position, from, to)) {
       flashInvalid(to)
       return
     }
-    const destRank = +to[1]
-    if (piece[1] === 'P' && (destRank === 8 || destRank === 1) && !promoType) {
+    if (piece[1] === 'P' && (to[1] === '8' || to[1] === '1') && !promoType) {
       pendingPromo = { from, to }
       return
     }
     snapshot()
-    const next: Placements = { ...placements }
-    delete next[from]
-    next[to] = promoType ? (piece[0] + promoType as PieceKey) : piece
-
-    // castling: the rook travels with the king
-    if (piece[1] === 'K' && from[1] === to[1] && Math.abs(from.charCodeAt(0) - to.charCodeAt(0)) === 2) {
-      const rank = from[1]
-      if (to[0] === 'g') {
-        const rook = placements[`h${rank}` as Square]
-        if (rook) {
-          next[`f${rank}` as Square] = rook
-          delete next[`h${rank}` as Square]
-        }
-      } else if (to[0] === 'c') {
-        const rook = placements[`a${rank}` as Square]
-        if (rook) {
-          next[`d${rank}` as Square] = rook
-          delete next[`a${rank}` as Square]
-        }
-      }
-    }
-
-    // en passant: the captured pawn is not on the destination square
-    if (piece[1] === 'P' && from[0] !== to[0] && !placements[to]) {
-      delete next[`${to[0]}${from[1]}` as Square]
-    }
-
-    placements = next
-    ply += 1
+    position = applyMove(position, from, to, promoType ?? 'Q')
     selected = null
     pendingPromo = null
   }
 
-  function choosePromo(type: 'Q' | 'R' | 'B' | 'N'): void {
+  function choosePromo(type: PromoType): void {
     if (!pendingPromo) return
     attemptMove(pendingPromo.from, pendingPromo.to, type)
   }
@@ -151,24 +118,30 @@
   }
 
   function takeOffBoard(): void {
-    if (!selected) return
+    const sq = selected
+    if (!sq) return
     snapshot()
     const next: Placements = { ...placements }
-    delete next[selected]
-    placements = next
+    delete next[sq]
+    position = { ...position, placements: next, castling: revokeCastling(position.castling, sq) }
     selected = null
   }
 
   export function undo(): void {
-    const prev = undoStack.pop()
+    const prev = undoStack.at(-1)
     if (!prev) return
-    placements = prev.p
-    ply = prev.t
+    undoStack = undoStack.slice(0, -1)
+    position = prev
     selected = null
     pendingPromo = null
   }
 
-  function dragStart(sq: Square): void {
+  function dragStart(sq: Square, event: DragEvent): void {
+    // same rule as clicking: only the side to move can pick a piece up
+    if (pendingPromo || placements[sq]?.[0] !== turn) {
+      event.preventDefault()
+      return
+    }
     dragged = sq
     selected = sq
   }
