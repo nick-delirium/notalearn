@@ -1,8 +1,10 @@
 <script lang="ts">
   import Board from './Board.svelte'
   import SolvedBar from './SolvedBar.svelte'
+  import Icon from './Icon.svelte'
   import { GLYPHS, NAMES } from './pieces'
-  import { SQUARES, applyMove, canMove, revokeCastling, startPosition } from './moves'
+  import { COARSE, click } from './input'
+  import { SQUARES, applyMove, canMove, positionKey, revokeCastling, startPosition } from './moves'
   import type { Position, PromoType } from './moves'
   import type { PieceKey, Placements, Square } from './pieces'
 
@@ -14,6 +16,10 @@
     hinted?: Square | null
     solved?: boolean
     onnext: () => void
+    /** positionKey after each half-move of the game line, from the start */
+    lineKeys: string[]
+    /** half-moves replayed along the line, or null once the position leaves it */
+    progress?: number | null
   }
 
   let {
@@ -23,7 +29,9 @@
     canUndo = $bindable(false),
     hinted = null,
     solved = false,
-    onnext
+    onnext,
+    lineKeys,
+    progress = $bindable(null)
   }: Props = $props()
 
   // positions are immutable values — every change assigns a new one — so raw state suffices
@@ -53,6 +61,11 @@
   $effect(() => { score = correct })
   $effect(() => { wrongSquares = mistakes })
   $effect(() => { canUndo = undoStack.length > 0 })
+  // on the line = same pieces and side to move as the game after the same number
+  // of half-moves (transpositions count; a hand-removed piece takes you off it)
+  $effect(() => {
+    progress = lineKeys[position.plies] === positionKey(placements, turn) ? position.plies : null
+  })
   $effect(() => () => clearTimeout(invalidTimer))
 
   function snapshot(): void {
@@ -195,13 +208,15 @@
             <span class="piece {turn === 'w' ? 'white' : 'black'}">{GLYPHS[key]}</span>
           </button>
         {/each}
-        <button class="promo-cancel" onclick={cancelPromo} aria-label="Cancel promotion">✕</button>
+        <button class="promo-cancel" onclick={cancelPromo} aria-label="Cancel promotion"><Icon name="x" size={15} /></button>
       </div>
     {:else if selected}
-      <span class="ub-info"><b>{selected}</b> — click a dotted square to move</span>
-      <button class="action ub-remove" onclick={takeOffBoard}>Take off board ✕</button>
+      <span class="ub-info"><b>{selected}</b> — {click} a dotted square to move</span>
+      <button class="action ub-remove" onclick={takeOffBoard}>Take off board <Icon name="x" size={14} /></button>
     {:else}
-      <span class="ub-info dim">Click a piece to see its legal moves · drag or click-click to move</span>
+      <span class="ub-info dim">{COARSE
+        ? 'Tap a piece to see its legal moves, then tap where it goes'
+        : 'Click a piece to see its legal moves · drag or click-click to move'}</span>
     {/if}
   </div>
   {/if}

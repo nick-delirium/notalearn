@@ -41,8 +41,6 @@
 
 <div class="board-side" class:solved>
   <div class="board-frame">
-    <div class="coords files">{#each FILES as f}<span>{f}</span>{/each}</div>
-    <div class="coords ranks">{#each RANKS as r}<span>{r}</span>{/each}</div>
     <div class="board" aria-label="Interactive chess board">
       {#each RANKS as rank}
         {#each FILES as file}
@@ -58,6 +56,10 @@
             ondrop={(e) => ondrop(sq, e)}
             aria-label={placements[sq] ? `${NAMES[placements[sq]]} on ${sq}` : sq}
           >
+            <!-- coordinates live inside the edge squares (in the opposite square color),
+                 so they line up exactly and don't cost the board any width -->
+            {#if file === 'a'}<span class="coord rank" aria-hidden="true">{rank}</span>{/if}
+            {#if rank === 1}<span class="coord file" aria-hidden="true">{file}</span>{/if}
             {#if hinted === sq && placements[sq] !== target[sq] && target[sq]}
               <span class="ghost {target[sq][0] === 'w' ? 'white' : 'black'}">{GLYPHS[target[sq]]}</span>
             {/if}

@@ -17,6 +17,8 @@ export interface Position {
   castling: CastlingRights
   /** square a pawn skipped with a double step on the previous move (capturable en passant) */
   ep: Square | null
+  /** half-moves played since the starting position */
+  plies: number
 }
 
 const fileI = (s: string) => s.charCodeAt(0) - 97
@@ -36,8 +38,18 @@ export function startPosition(): Position {
     placements: { ...START },
     turn: 'w',
     castling: { wK: true, wQ: true, bK: true, bQ: true },
-    ep: null
+    ep: null,
+    plies: 0
   }
+}
+
+/** Identity of a position for comparing against a game line (pieces + side to move). */
+export function positionKey(placements: Placements, turn: PieceColor): string {
+  return (Object.keys(placements) as Square[])
+    .filter((sq) => placements[sq])
+    .sort()
+    .map((sq) => sq + placements[sq])
+    .join('') + turn
 }
 
 /** Whether the piece on `from` attacks `to`: geometry and blockers only, whatever stands on `to`. */
@@ -168,6 +180,7 @@ export function applyMove(pos: Position, from: Square, to: Square, promo: PromoT
     placements: next,
     turn: opponent(color),
     castling: revokeCastling(pos.castling, from, to),
-    ep: piece[1] === 'P' && Math.abs(toRank - fromRank) === 2 ? at(fileI(from), (fromRank + toRank) / 2) : null
+    ep: piece[1] === 'P' && Math.abs(toRank - fromRank) === 2 ? at(fileI(from), (fromRank + toRank) / 2) : null,
+    plies: pos.plies + 1
   }
 }

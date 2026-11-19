@@ -1,11 +1,14 @@
 <script lang="ts">
   import { Chess } from 'chess.js'
-  import type { Color, PieceSymbol, Square as ChessSquare } from 'chess.js'
   import games from './pgns'
   import EasyMode from './lib/EasyMode.svelte'
   import RecallMode from './lib/RecallMode.svelte'
+  import MoveList from './lib/MoveList.svelte'
+  import Icon from './lib/Icon.svelte'
   import { swUpdate } from './lib/swUpdate.svelte'
   import { generateGame } from './lib/randomGame'
+  import { positionKey } from './lib/moves'
+  import { Click, click } from './lib/input'
   import { FILES } from './lib/pieces'
   import type { PieceKey, Placements, Square } from './lib/pieces'
 
@@ -21,15 +24,11 @@
     id: Phase
     label: string
   }
-  interface MovePair {
-    n: number
-    w: string
-    b?: string
-  }
 
-  const DIFFICULTIES: DifficultyDef[] = [    { id: 'easy', label: 'Easy', hint: 'Pieces move by real chess rules — legal squares are dotted. Click a piece, then a dotted square. Captures and castling included.' },
-    { id: 'medium', label: 'Medium', hint: 'Every piece is hidden. Click a “?” square, then pick the piece you think stands there.' },
-    { id: 'hard', label: 'Hard', hint: 'The board is empty. Click any square, then pick the piece that belongs there.' }
+  const DIFFICULTIES: DifficultyDef[] = [
+    { id: 'easy', label: 'Easy', hint: `Replay the game move by move — ${click} a piece, then one of its dotted squares. The move to play next is highlighted in the notation.` },
+    { id: 'medium', label: 'Medium', hint: `Every piece is hidden. ${Click} a “?” square, then pick the piece you think stands there.` },
+    { id: 'hard', label: 'Hard', hint: `The board is empty. ${Click} any square, then pick the piece that belongs there.` }
   ]
   const PHASES: PhaseDef[] = [
     { id: 'opening', label: 'Opening' },
@@ -43,7 +42,12 @@
   let difficulty = $state<Difficulty>('easy')
   let phase = $state<Phase>('random')
   let target = $state<Placements>({})
-  let movePairs = $state<MovePair[]>([])
+  /** SAN of each half-move leading to the target position */
+  let line = $state<string[]>([])
+  /** positionKey before the first and after every half-move of `line` */
+  let lineKeys = $state<string[]>([])
+  /** easy mode: half-moves replayed along the line (null = off it) */
+  let progress = $state<number | null>(null)
   let result = $state('')
   let puzzleId = $state(0)
   let score = $state(0)
@@ -61,19 +65,22 @@
   const phaseLabel = $derived(PHASES.find((p) => p.id === phase)!.label)
   const total = $derived(Object.keys(target).length)
   const solved = $derived(total > 0 && score === total && strays === 0)
+  const tracking = $derived(difficulty === 'easy')
   // name the position by its last move in proper notation ("8...c6", "11. Qxd5+");
   // a ply count would call 8 full moves "16 moves"
   const lastMove = $derived.by(() => {
-    const last = movePairs.at(-1)
-    if (!last) return null
-    return last.b ? `${last.n}...${last.b}` : `${last.n}. ${last.w}`
+    const i = line.length - 1
+    if (i < 0) return null
+    const n = Math.floor(i / 2) + 1
+    return i % 2 === 0 ? `${n}. ${line[i]}` : `${n}...${line[i]}`
   })
 
-  // strays only exist in medium/hard (RecallMode syncs them); keep the
-  // counter at zero in easy mode so a previous recall session can't leak
-  // a stale "off-target" count into the score line
+  // strays only exist in medium/hard and progress only in easy (the active
+  // mode syncs its own); reset the other so a previous session can't leak
+  // into the score line or the notation highlights
   $effect(() => {
     if (difficulty === 'easy') strays = 0
+    else progress = null
   })
 
   function plyRange(max: number): [number, number] {
@@ -118,18 +125,17 @@
     const k = Math.min(hi, lo + Math.floor(Math.random() * (hi - lo + 1)))
 
     const game = new Chess()
-    for (let i = 0; i < k; i++) game.move(history[i])
+    const keys = [positionKey(toMap(game), game.turn())]
+    for (let i = 0; i < k; i++) {
+      game.move(history[i])
+      keys.push(positionKey(toMap(game), game.turn()))
+    }
 
     target = toMap(game)
+    line = history.slice(0, k)
+    lineKeys = keys
     gameEnd = k === max
     result = gameEnd ? source.result : ''
-
-    const verbose = game.history({ verbose: true }) as { san: string; color: Color; piece: PieceSymbol; from: ChessSquare; to: ChessSquare }[]
-    const pairs: MovePair[] = []
-    for (let i = 0; i < verbose.length; i += 2) {
-      pairs.push({ n: i / 2 + 1, w: verbose[i].san, b: verbose[i + 1]?.san })
-    }
-    movePairs = pairs
     puzzleId += 1
   }
 
@@ -186,10 +192,12 @@
 
 <main class="app">
   <header class="top">
+    <h1 class="brand"><img src="icon-192.png" alt="" width="30" height="30" /><span>Nota<em>Learn</em></span></h1>
+
     <div class="controls">
       <div class="menu" class:open={openMenu === 'difficulty'}>
         <button class="menu-toggle" aria-expanded={openMenu === 'difficulty'} onclick={() => toggleMenu('difficulty')}>
-          Difficulty <b>{diff.label}</b><span class="caret">▾</span>
+          <span>Difficulty <b>{diff.label}</b></span><span class="caret"><Icon name="chevron-down" size={14} /></span>
         </button>
         {#if openMenu === 'difficulty'}
           <div class="menu-list" role="listbox" aria-label="Difficulty">
@@ -203,7 +211,7 @@
 
       <div class="menu" class:open={openMenu === 'phase'}>
         <button class="menu-toggle" aria-expanded={openMenu === 'phase'} onclick={() => toggleMenu('phase')}>
-          Position <b>{phaseLabel}</b><span class="caret">▾</span>
+          <span>Position <b>{phaseLabel}</b></span><span class="caret"><Icon name="chevron-down" size={14} /></span>
         </button>
         {#if openMenu === 'phase'}
           <div class="menu-list" role="listbox" aria-label="Position range">
@@ -217,18 +225,23 @@
     </div>
 
     <div class="actions">
-      <button class="new" onclick={newGame} aria-label="New puzzle"><em>New puzzle</em><span>⟳</span></button>
+      <button class="new" onclick={newGame}><Icon name="rotate-cw" size={15} />New puzzle</button>
     </div>
   </header>
 
   <div class="stage">
-    {#key `${difficulty}-${puzzleId}`}
-      {#if difficulty === 'easy'}
-        <EasyMode bind:this={modeRef} {target} bind:score bind:wrongSquares bind:canUndo hinted={hintedSquare} {solved} onnext={newGame} />
-      {:else}
-        <RecallMode {difficulty} {target} bind:score bind:wrongSquares bind:strays hinted={hintedSquare} {solved} onnext={newGame} />
-      {/if}
-    {/key}
+    <div class="board-col">
+      {#key `${difficulty}-${puzzleId}`}
+        {#if difficulty === 'easy'}
+          <EasyMode bind:this={modeRef} {target} {lineKeys} bind:progress bind:score bind:wrongSquares bind:canUndo
+            hinted={hintedSquare} {solved} onnext={newGame} />
+        {:else}
+          <RecallMode {difficulty} {target} bind:score bind:wrongSquares bind:strays hinted={hintedSquare} {solved} onnext={newGame} />
+        {/if}
+      {/key}
+      <!-- phones: the notation, one line, right under the board (the panel list is a scroll away) -->
+      <MoveList {line} variant="strip" {tracking} {progress} complete={gameEnd} {result} />
+    </div>
 
     <aside class="panel">
       <p class="eyebrow">
@@ -246,36 +259,26 @@
         </div>
       </div>
 
-      <div class="moves-text" aria-label="Game notation">
-        {#each movePairs as pair, i}
-          {@const isLast = i === movePairs.length - 1}
-          <span class="mnum">{pair.n}.</span><span class="san" class:last={isLast && !pair.b}>{pair.w}</span>
-          {#if pair.b}<span class="san" class:last={isLast}>{pair.b}</span>{/if}
-        {/each}
-        {#if gameEnd && result}<span class="result">{result}</span>
-        {:else if !gameEnd}<span class="more">…</span>{/if}
-      </div>
+      <MoveList {line} variant="sheet" {tracking} {progress} complete={gameEnd} {result} />
 
       {#if solved}
         <!-- the "Next puzzle" action lives under the board (SolvedBar), where it's seen on mobile too -->
-        <div class="success">
-          <span>✦</span>
-          <p>Perfect — every piece is where it belongs.</p>
-        </div>
+        <div class="note success"><Icon name="circle-check" size={18} /><p>Perfect — every piece is where it belongs.</p></div>
       {:else}
-        <div class="hint"><span>⌁</span><p>{diff.hint}</p></div>
+        <div class="note hint"><Icon name="lightbulb" size={18} /><p>{diff.hint}</p></div>
       {/if}
-
-      <div class="learn">
-        <span>♞</span>
-        <p>New to notation? Read about <a href="https://en.wikipedia.org/wiki/Algebraic_notation_(chess)" target="_blank" rel="noopener noreferrer">Algebraic Chess Notation</a> on Wikipedia.</p>
-      </div>
-
-      <div class="star-row">
-        <a class="github-button" href="https://github.com/nick-delirium/notalearn" data-color-scheme="no-preference: light; light: light; dark: dark;" data-size="large" data-show-count="true" aria-label="Star nick-delirium/notalearn on GitHub">Star</a>
-      </div>
     </aside>
   </div>
+
+  <footer class="foot">
+    <p>
+      <Icon name="book-open" size={15} />
+      New to chess notation? Read about
+      <a href="https://en.wikipedia.org/wiki/Algebraic_notation_(chess)" target="_blank" rel="noopener noreferrer">algebraic notation</a>
+      on Wikipedia.
+    </p>
+    <a class="github-button" href="https://github.com/nick-delirium/notalearn" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-show-count="true" aria-label="Star nick-delirium/notalearn on GitHub">Star on GitHub</a>
+  </footer>
 
   {#if swUpdate.ready}
     <div class="update-bar" role="status">

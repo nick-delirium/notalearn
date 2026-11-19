@@ -1,6 +1,7 @@
 <script lang="ts">
   import Board from './Board.svelte'
   import SolvedBar from './SolvedBar.svelte'
+  import Icon from './Icon.svelte'
   import { GLYPHS, NAMES, PALETTE } from './pieces'
   import { positionPicker } from './positionPicker'
   import type { PieceKey, Placements, Square } from './pieces'
@@ -85,7 +86,7 @@
       <div class="picker" use:positionPicker={selected}>
         <div class="picker-head">
           <span>Place on {selected}</span>
-          <button class="clear" onclick={clearSquare} aria-label="Remove piece">Remove ✕</button>
+          <button class="clear" onclick={clearSquare} aria-label="Remove piece">Remove <Icon name="x" size={13} /></button>
         </div>
         <div class="picker-grid">
           {#each PALETTE as p}
